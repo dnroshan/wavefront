@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Wavefront
+Exec=wavefront
+Icon=cc.placid.Wavefront
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=music;mp3;player;
+StartupNotify=true
+DBusActivatable=true

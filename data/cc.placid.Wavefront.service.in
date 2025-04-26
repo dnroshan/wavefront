@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=cc.placid.Wavefront
+Exec=@bindir@/wavefront --gapplication-service

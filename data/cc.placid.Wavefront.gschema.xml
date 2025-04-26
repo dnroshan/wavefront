@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="wavefront">
+	<schema id="cc.placid.Wavefront" path="/cc/placid/Wavefront/">
+	</schema>
+</schemalist>
+

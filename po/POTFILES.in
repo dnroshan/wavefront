@@ -1,0 +1,8 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/cc.placid.Wavefront.desktop.in
+data/cc.placid.Wavefront.metainfo.xml.in
+data/cc.placid.Wavefront.gschema.xml
+src/main.c
+src/wavefront-window.c
+src/wavefront-window.ui
