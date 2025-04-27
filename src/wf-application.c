@@ -48,8 +48,12 @@ static void
 wf_application_activate (GApplication *app)
 {
     GtkWindow *window;
+    GtkIconTheme *icon_theme;
 
     g_assert (WF_IS_APPLICATION (app));
+
+    icon_theme = gtk_icon_theme_get_for_display (gdk_display_get_default ());
+    gtk_icon_theme_add_resource_path (icon_theme, "/cc/placid/Wavefront/icons");
 
     window = gtk_application_get_active_window (GTK_APPLICATION (app));
 

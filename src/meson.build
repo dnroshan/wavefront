@@ -10,7 +10,8 @@ wavefront_deps = [
 ]
 
 wavefront_sources += gnome.compile_resources('wavefront-resources',
-  'wavefront.gresource.xml',
+  'resources/wavefront.gresource.xml',
+  source_dir: 'resources',
   c_name: 'wavefront'
 )
 

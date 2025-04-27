@@ -1,0 +1,13 @@
+#playlist-view {
+  background-color: var(--sidebar-bg-color);
+}
+
+.play-control {
+  border-radius: 999px;
+}
+
+button.large {
+  min-width: 48px;
+  min-height: 48px;
+}
+

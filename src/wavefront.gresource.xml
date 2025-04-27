@@ -3,6 +3,12 @@
   <gresource prefix="/cc/placid/Wavefront">
     <file preprocess="xml-stripblanks">wf-window.ui</file>
     <file preprocess="xml-stripblanks">gtk/help-overlay.ui</file>
+    <file>style.css</file>
+  </gresource>
+  <gresource prefix="/cc/placid/Wavefront/icons/scalable/actions">
+    <file>play-symbolic.svg</file>
+    <file>next-symbolic.svg</file>
+    <file>prev-symbolic.svg</file>
   </gresource>
 </gresources>
 
