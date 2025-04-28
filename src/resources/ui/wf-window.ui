@@ -83,7 +83,7 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="play_button">
                             <property name="icon-name">play-symbolic</property>
                             <style>
                               <class name="circular"/>
@@ -120,6 +120,12 @@
     </child>
   </template>
   <menu id="primary_menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">_Open</attribute>
+        <attribute name="action">win.open</attribute>
+      </item>
+    </section>
     <section>
       <item>
         <attribute name="label" translatable="yes">_Preferences</attribute>

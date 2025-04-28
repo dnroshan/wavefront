@@ -1,6 +1,7 @@
-/* main.c
+/*
+ * wf-player.h
  *
- * Copyright 2025 Dilnavas Roshan
+ * Copyright 2025 Dilnavas Roshan <dilnavasroshan@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,32 +14,25 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "config.h"
+#pragma once
 
-#include <glib/gi18n.h>
-#include <gst/gst.h>
+#include <glib-object.h>
 
-#include "wf-application.h"
+G_BEGIN_DECLS
 
-int
-main (int   argc,
-      char *argv[])
-{
-    g_autoptr (WfApplication) app = NULL;
+#define WF_TYPE_PLAYER (wf_player_get_type ())
+G_DECLARE_FINAL_TYPE (WfPlayer, wf_player, WF, PLAYER, GObject)
 
-    bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
-    bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-    textdomain (GETTEXT_PACKAGE);
+WfPlayer *wf_player_new (void);
 
-    app = wf_application_new (FW_APP_ID, G_APPLICATION_DEFAULT_FLAGS);
+void wf_player_set_file (WfPlayer    *self,
+                         const gchar *uri);
+void wf_player_play     (WfPlayer *self);
 
-    gst_init (&argc, &argv);
-
-    return g_application_run (G_APPLICATION (app), argc, argv);
-}
+G_END_DECLS
 
