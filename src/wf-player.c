@@ -87,7 +87,34 @@ wf_player_class_init (WfPlayerClass *klass)
 static void
 wf_player_init (WfPlayer *self)
 {
+    GstElement *filter_pipeline;
+    GstElement *equalizer, *spectrum;
+    GstElement *play_pipeline;
+    GstPad *src_pad, *sink_pad;
+    GstPad *ghost_src_pad, *ghost_sink_pad;
+
+    equalizer = gst_element_factory_make ("equalizer-10bands", "equalizer");
+    spectrum = gst_element_factory_make ("spectrum", "spectrum");
+
+    sink_pad = gst_element_get_static_pad (equalizer, "sink");
+    src_pad = gst_element_get_static_pad (spectrum, "src");
+    gst_pad_set_active (sink_pad, TRUE);
+    gst_pad_set_active (src_pad, TRUE);
+
+    filter_pipeline = gst_pipeline_new (NULL);
+    gst_bin_add_many (GST_BIN (filter_pipeline), equalizer, spectrum, NULL);
+
+    gst_element_link (equalizer, spectrum);
+
+    ghost_sink_pad = gst_ghost_pad_new ("sink", sink_pad);
+    ghost_src_pad = gst_ghost_pad_new ("src", src_pad);
+
+    gst_element_add_pad (filter_pipeline, ghost_sink_pad);
+    gst_element_add_pad (filter_pipeline, ghost_src_pad);
+
     self->play = gst_play_new (NULL);
+    play_pipeline = gst_play_get_pipeline (self->play);
+    g_object_set (play_pipeline, "audio-filter", filter_pipeline, NULL);
     self->signal_adaptor = gst_play_signal_adapter_new (self->play);
 
     g_signal_connect_swapped (self->signal_adaptor, "position-updated",
