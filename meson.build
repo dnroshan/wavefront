@@ -65,7 +65,6 @@ test_c_args = [
   '-Wredundant-decls',
   '-Wstrict-prototypes',
   '-Wswitch-default',
-  '-Wswitch-enum',
   '-Wundef',
   '-Wuninitialized',
   '-Wunused',

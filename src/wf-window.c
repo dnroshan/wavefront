@@ -22,29 +22,36 @@
 
 #include "wf-window.h"
 #include "wf-player.h"
+#include "wf-waveform.h"
+#include "wf-seek-bar.h"
 
 struct _WfWindow
 {
     AdwApplicationWindow parent_instance;
 
     WfPlayer *player;
+    WfWaveform *waveform;
 
     /* Template widgets */
     GtkWidget *play_button;
+    WfSeekBar *seek_bar;
 };
 
-static void wf_window_dispose (GObject *object);
-
-/* Action callbacks */
-
-static void action_open_cb (GSimpleAction *action,
-                            GVariant      *parameters,
-                            gpointer       user_data);
-
-/* Button click callbacks */
-
-static void play_button_cb (GtkButton *button,
-                            gpointer   user_data);
+static void dispose             (GObject *object);
+static void action_open_cb      (GSimpleAction *action,
+                                 GVariant      *parameters,
+                                 gpointer       user_data);
+static void play_button_cb      (GtkButton *button,
+                                 gpointer   user_data);
+static void position_changed_cb (WfWindow *self,
+                                 guint64 pos,
+                                 gpointer user_data);
+static void duration_changed_cb (WfWindow *self,
+                                 guint64 duration,
+                                 gpointer user_data);
+static void seeked_cb           (WfWindow *self,
+                                 guint64 pos,
+                                 gpointer user_data);
 
 static GActionEntry window_actions[] =
 {
@@ -59,31 +66,44 @@ wf_window_class_init (WfWindowClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
-    object_class->dispose = wf_window_dispose;
+    object_class->dispose = dispose;
 
     gtk_widget_class_set_template_from_resource (widget_class,
                                                  "/cc/placid/Wavefront/ui/wf-window.ui");
 
     gtk_widget_class_bind_template_child (widget_class, WfWindow, play_button);
+    gtk_widget_class_bind_template_child (widget_class, WfWindow, seek_bar);
 }
 
 static void
 wf_window_init (WfWindow *self)
 {
+    g_type_ensure (WF_TYPE_SEEK_BAR);
+
     gtk_widget_init_template (GTK_WIDGET (self));
 
-    g_action_map_add_action_entries (G_ACTION_MAP (self), window_actions, G_N_ELEMENTS (window_actions), self);
+    g_action_map_add_action_entries (G_ACTION_MAP (self), window_actions,
+                                     G_N_ELEMENTS (window_actions), self);
 
     self->player = wf_player_new ();
+    g_signal_connect_swapped (self->player, "position-changed",
+                              G_CALLBACK (position_changed_cb), self);
+    g_signal_connect_swapped (self->player, "duration-changed",
+                              G_CALLBACK (duration_changed_cb), self);
     g_signal_connect (self->play_button, "clicked", G_CALLBACK (play_button_cb), self);
+
+    self->waveform = wf_waveform_new ();
+    g_object_bind_property (self->waveform, "peaks", self->seek_bar, "peaks", G_BINDING_DEFAULT);
+    g_signal_connect_swapped (self->seek_bar, "seeked", G_CALLBACK (seeked_cb), self);
 }
 
 static void
-wf_window_dispose (GObject *object)
+dispose (GObject *object)
 {
     WfWindow *window = WF_WINDOW (object);
 
     g_clear_object (&window->player);
+    g_clear_object (&window->waveform);
     G_OBJECT_CLASS (wf_window_parent_class)->dispose (object);
 }
 
@@ -105,6 +125,7 @@ file_opened_async_cb (GObject      *source,
     }
 
     uri = g_file_get_uri (file);
+    wf_waveform_set_file (window->waveform, uri);
     wf_player_set_file (window->player, uri);
 }
 
@@ -128,5 +149,23 @@ play_button_cb (GtkButton *button,
     WfWindow *window = WF_WINDOW (user_data);
 
     wf_player_play (window->player);
+}
+
+static void
+position_changed_cb (WfWindow *self, guint64 pos, gpointer user_data)
+{
+    wf_seek_bar_set_position (self->seek_bar, pos);
+}
+
+static void
+duration_changed_cb (WfWindow *self, guint64 duration, gpointer user_data)
+{
+    wf_seek_bar_set_duration (self->seek_bar, duration);
+}
+
+static void
+seeked_cb (WfWindow *self, guint64 pos, gpointer user_data)
+{
+    wf_player_set_position (self->player, pos);
 }
 

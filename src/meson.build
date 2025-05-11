@@ -3,12 +3,16 @@ wavefront_sources = [
   'wf-application.c',
   'wf-window.c',
   'wf-player.c',
+  'wf-waveform.c',
+  'wf-seek-bar.c',
 ]
 
 wavefront_deps = [
   dependency('gtk4'),
   dependency('libadwaita-1', version: '>= 1.4'),
   dependency('gstreamer-1.0'),
+  dependency('gstreamer-play-1.0'),
+  cc.find_library('m', required: true),
 ]
 
 wavefront_sources += gnome.compile_resources('wavefront-resources',

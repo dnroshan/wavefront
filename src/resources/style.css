@@ -7,3 +7,7 @@ button.large {
   min-height: 48px;
 }
 
+wfseekbar {
+  padding: 10px;
+}
+
