@@ -35,19 +35,43 @@ struct _WfPlayer
 
 enum
 {
+    PROP_ZERO,
+    PROP_DURATION,
+    PROP_POSITION,
+    N_PROPS
+};
+
+enum
+{
+    DURATION_CHANGED,
     POSITION_CHNAGED,
     N_SIGNALS
 };
 
-static guint wf_player_signals[N_SIGNALS] = {0};
+static GParamSpec *properties[N_PROPS] = {NULL, };
+static guint signals[N_SIGNALS] = {0, };
 
-static void wf_player_dispose  (GObject *object);
-static void wf_player_finalize (GObject *object);
+static void dispose      (GObject *object);
+static void finalize     (GObject *object);
+
+static void get_property (GObject    *object,
+                          guint       property_id,
+                          GValue     *vale,
+                          GParamSpec *pspec);
+
+static void set_property (GObject      *object,
+                          guint         property_id,
+                          const GValue *vale,
+                          GParamSpec   *pspec);
 
 /* Bus callbacks */
 
 static void position_updated_cb   (WfPlayer *self,
                                    guint64   pos,
+                                   gpointer  user_data);
+
+static void duration_changed_cb   (WfPlayer *self,
+                                   guint64   duration,
                                    gpointer  user_data);
 
 static void state_changed_cb      (WfPlayer     *self,
@@ -73,15 +97,36 @@ wf_player_class_init (WfPlayerClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    object_class->dispose = wf_player_dispose;
-    object_class->finalize = wf_player_finalize;
+    object_class->get_property = get_property;
+    object_class->set_property = set_property;
+    object_class->dispose = dispose;
+    object_class->finalize = finalize;
 
-    wf_player_signals[POSITION_CHNAGED] =
+    properties[PROP_DURATION] =
+        g_param_spec_uint64 ("duration", NULL, NULL,
+                             0, G_MAXUINT64, 0,
+                             G_PARAM_READABLE);
+
+    properties[PROP_POSITION] =
+        g_param_spec_uint64 ("position", NULL, NULL,
+                             0, G_MAXUINT64, 0,
+                             G_PARAM_READWRITE);
+
+    signals[DURATION_CHANGED] =
+        g_signal_new ("duration-changed",
+                      G_TYPE_FROM_CLASS (klass),
+                      G_SIGNAL_RUN_LAST,
+                      0, NULL, NULL, NULL,
+                      G_TYPE_NONE, 1, G_TYPE_UINT64);
+
+    signals[POSITION_CHNAGED] =
         g_signal_new ("position-changed",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       0, NULL, NULL, NULL,
-                      G_TYPE_NONE, 1, G_TYPE_DOUBLE);
+                      G_TYPE_NONE, 1, G_TYPE_UINT64);
+
+    g_object_class_install_properties (object_class, N_PROPS, properties);
 }
 
 static void
@@ -127,10 +172,12 @@ wf_player_init (WfPlayer *self)
                               G_CALLBACK (media_info_updated_cb), self);
     g_signal_connect_swapped (self->signal_adaptor, "error",
                               G_CALLBACK (error_cb), self);
+    g_signal_connect_swapped (self->signal_adaptor, "duration-changed",
+                              G_CALLBACK (duration_changed_cb), self);
 }
 
 static void
-wf_player_dispose (GObject *object)
+dispose (GObject *object)
 {
     WfPlayer *player = WF_PLAYER (object);
     GstBus *bus;
@@ -146,9 +193,48 @@ wf_player_dispose (GObject *object)
 }
 
 static void
-wf_player_finalize (GObject *object)
+finalize (GObject *object)
 {
     G_OBJECT_CLASS (wf_player_parent_class)->finalize (object);
+}
+
+static void
+get_property (GObject    *object,
+              guint       property_id,
+              GValue     *value,
+              GParamSpec *pspec)
+{
+    WfPlayer *player = WF_PLAYER (object);
+
+    switch (property_id) {
+    case PROP_POSITION:
+        g_value_set_uint64 (value, wf_player_get_position (player));
+        break;
+    case PROP_DURATION:
+        g_value_set_uint64 (value, wf_player_get_duration (player));
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
+}
+
+static void
+set_property (GObject      *object,
+              guint         property_id,
+              const GValue *value,
+              GParamSpec   *pspec)
+{
+    WfPlayer *player =  WF_PLAYER (object);
+
+    switch (property_id) {
+    case PROP_POSITION:
+        wf_player_set_position (player, g_value_get_uint64 (value));
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+        break;
+    }
 }
 
 WfPlayer *
@@ -158,16 +244,19 @@ wf_player_new (void)
 }
 
 static void
+duration_changed_cb   (WfPlayer *self,
+                       guint64   duration,
+                       gpointer  user_data)
+{
+    g_signal_emit (self, signals[DURATION_CHANGED], 0, duration);
+}
+
+static void
 position_updated_cb (WfPlayer *self,
                      guint64   pos,
                      gpointer  user_data)
 {
-    guint64 duration;
-    gdouble pos_frac;
-
-    duration = gst_play_get_duration (self->play);
-    pos_frac = pos / (gdouble) duration;
-    g_signal_emit (self, wf_player_signals[POSITION_CHNAGED], 0, pos_frac);
+    g_signal_emit (self, signals[POSITION_CHNAGED], 0, pos);
 }
 
 static void
@@ -211,6 +300,32 @@ wf_player_set_file (WfPlayer    *self,
 void
 wf_player_play (WfPlayer *self)
 {
+    g_return_if_fail (WF_IS_PLAYER (self));
+
     gst_play_play (self->play);
+}
+
+guint64
+wf_player_get_duration (WfPlayer *self)
+{
+    g_return_val_if_fail (WF_IS_PLAYER (self), 0);
+
+    return gst_play_get_duration (self->play);
+}
+
+guint64
+wf_player_get_position (WfPlayer *self)
+{
+    g_return_val_if_fail (WF_IS_PLAYER (self), 0);
+
+    return gst_play_get_position (self->play);
+}
+
+void
+wf_player_set_position (WfPlayer *self, guint64 pos)
+{
+    g_return_if_fail (WF_IS_PLAYER (self));
+
+    gst_play_seek (self->play, pos);
 }
 

@@ -30,9 +30,13 @@ G_DECLARE_FINAL_TYPE (WfPlayer, wf_player, WF, PLAYER, GObject)
 
 WfPlayer *wf_player_new (void);
 
-void wf_player_set_file (WfPlayer    *self,
-                         const gchar *uri);
-void wf_player_play     (WfPlayer *self);
+void wf_player_set_file        (WfPlayer    *self,
+                                const gchar *uri);
+guint64 wf_player_get_duration (WfPlayer *self);
+guint64 wf_player_get_position (WfPlayer *self);
+void    wf_player_set_position (WfPlayer *self,
+                                guint64 pos);
+void    wf_player_play         (WfPlayer *self);
 
 G_END_DECLS
 
