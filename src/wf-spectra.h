@@ -1,5 +1,5 @@
 /*
- * wf-player.h
+ * wf-spectra.h
  *
  * Copyright 2025 Dilnavas Roshan <dilnavasroshan@gmail.com>
  *
@@ -22,23 +22,24 @@
 #pragma once
 
 #include <glib-object.h>
-#include "wf-spectra.h"
 
 G_BEGIN_DECLS
 
-#define WF_TYPE_PLAYER (wf_player_get_type ())
-G_DECLARE_FINAL_TYPE (WfPlayer, wf_player, WF, PLAYER, GObject)
+#define WF_TYPE_SPECTRA (wf_spectra_get_type ())
 
-WfPlayer *wf_player_new (void);
+typedef struct
+{
+    guint n_bands;
 
-void wf_player_set_file        (WfPlayer    *self,
-                                const gchar *uri);
-guint64 wf_player_get_duration (WfPlayer *self);
-guint64 wf_player_get_position (WfPlayer *self);
-void    wf_player_set_position (WfPlayer *self,
-                                guint64   pos);
-void    wf_player_play         (WfPlayer *self);
+    gfloat *magnitude;
+    gfloat *phase;
+} WfSpectra;
 
-const WfSpectra *wf_player_get_specta (WfPlayer *self);
+GType      wf_spectra_get_type   (void);
+WfSpectra *wf_spectra_new        (guint n_bands);
+void       wf_spectra_set_values (WfSpectra    *self,
+                                  const GValue *mag_db,
+                                  const GValue *phase);
+void       wf_spectra_free       (WfSpectra *self);
 
 G_END_DECLS

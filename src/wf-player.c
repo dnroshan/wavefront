@@ -23,6 +23,7 @@
 #include <gst/play/play.h>
 
 #include "wf-player.h"
+#include "wf-spectra.h"
 
 struct _WfPlayer
 {
@@ -30,7 +31,8 @@ struct _WfPlayer
 
     GstPlay *play;
     GstPlaySignalAdapter *signal_adaptor;
-    GstBus *bus;
+
+    WfSpectra *spectra;
 };
 
 enum
@@ -90,6 +92,11 @@ static void media_info_updated_cb (WfPlayer         *self,
                                    GstPlayMediaInfo *media_info,
                                    gpointer          user_data);
 
+static void element_cb            (GstBus     *bus,
+                                   GstMessage *msg,
+                                   gpointer    user_data);
+
+
 G_DEFINE_FINAL_TYPE (WfPlayer, wf_player, G_TYPE_OBJECT)
 
 static void
@@ -137,9 +144,15 @@ wf_player_init (WfPlayer *self)
     GstElement *play_pipeline;
     GstPad *src_pad, *sink_pad;
     GstPad *ghost_src_pad, *ghost_sink_pad;
+    GstBus *bus;
+
+    self->spectra = wf_spectra_new (20);
 
     equalizer = gst_element_factory_make ("equalizer-10bands", "equalizer");
     spectrum = gst_element_factory_make ("spectrum", "spectrum");
+
+    g_object_set (spectrum, "bands", self->spectra->n_bands, "threshold", -80,
+                  "post-messages", TRUE,"message-phase", TRUE, NULL);
 
     sink_pad = gst_element_get_static_pad (equalizer, "sink");
     src_pad = gst_element_get_static_pad (spectrum, "src");
@@ -160,6 +173,10 @@ wf_player_init (WfPlayer *self)
     self->play = gst_play_new (NULL);
     play_pipeline = gst_play_get_pipeline (self->play);
     g_object_set (play_pipeline, "audio-filter", filter_pipeline, NULL);
+    bus = gst_element_get_bus (play_pipeline);
+    g_signal_connect (bus, "message::element", G_CALLBACK (element_cb), self);
+    gst_object_unref (bus);
+
     self->signal_adaptor = gst_play_signal_adapter_new (self->play);
 
     g_signal_connect_swapped (self->signal_adaptor, "position-updated",
@@ -180,11 +197,9 @@ static void
 dispose (GObject *object)
 {
     WfPlayer *player = WF_PLAYER (object);
-    GstBus *bus;
 
-    bus = gst_play_get_message_bus (player->play);
-    gst_bus_set_flushing (bus, TRUE);
-    gst_object_unref (bus);
+    // gst_bus_set_flushing (player->bus, TRUE);
+    // gst_object_unref (player->bus);
 
     g_clear_object (&player->signal_adaptor);
     g_clear_object (&player->play);
@@ -195,6 +210,9 @@ dispose (GObject *object)
 static void
 finalize (GObject *object)
 {
+    WfPlayer *player = WF_PLAYER (object);
+
+    g_clear_pointer (&player->spectra, wf_spectra_free);
     G_OBJECT_CLASS (wf_player_parent_class)->finalize (object);
 }
 
@@ -234,6 +252,23 @@ set_property (GObject      *object,
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
         break;
+    }
+}
+
+static void
+element_cb (GstBus     *bus,
+            GstMessage *msg,
+            gpointer    user_data)
+{
+    WfPlayer *player = WF_PLAYER (user_data);
+    const GstStructure *structure;
+    const GValue *magnitude, *phase;
+
+    structure = gst_message_get_structure (msg);
+    if (gst_structure_has_name (structure, "spectrum")) {
+        magnitude = gst_structure_get_value (structure, "magnitude");
+        phase = gst_structure_get_value (structure, "phase");
+        wf_spectra_set_values (player->spectra, magnitude, phase);
     }
 }
 
@@ -329,3 +364,10 @@ wf_player_set_position (WfPlayer *self, guint64 pos)
     gst_play_seek (self->play, pos);
 }
 
+const WfSpectra *
+wf_player_get_spectra (WfPlayer *self)
+{
+    g_return_val_if_fail (WF_IS_PLAYER (self), NULL);
+
+    return self->spectra;
+}
